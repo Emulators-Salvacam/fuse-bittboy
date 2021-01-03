@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Fuse FUSE_VERSION
+Comment=Fuse ZX Spectrum emulator FUSE_VERSION (vFUSE_OD_VERSION)
+Exec=fuse-retrofw %f
+Icon=fuse
+Type=Application
+Categories=emulators;
+X-OD-Manual=readme.txt

@@ -1,0 +1,10 @@
+Package: Fuse FUSE_VERSION
+Version: DATE_VERSION-FUSE_VERSION-FUSE_OD_VERSION
+Description: Fuse ZX Spectrum emulator FUSE_VERSION (vFUSE_OD_VERSION)
+Section: emus
+Priority: optional
+Maintainer: plrguez
+Architecture: mipsel
+Homepage: https://github.com/plrguez/fuse-od
+Depends:
+Source: https://github.com/plrguez/fuse-od
