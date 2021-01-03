@@ -597,6 +597,11 @@ widget_$_->{name}_keyhandler( input_key key )
     if ( highlight_line ) {
       new_highlight_line = highlight_line - 1;
       cursor_pressed = 1;
+    #ifdef GCWZERO
+    } else {
+      new_highlight_line = $count - 1;
+      cursor_pressed = 1;
+    #endif
     }
     break;
 
@@ -606,6 +611,11 @@ widget_$_->{name}_keyhandler( input_key key )
     if ( highlight_line + 1 < $count ) {
       new_highlight_line = highlight_line + 1;
       cursor_pressed = 1;
+    #ifdef GCWZERO
+    } else {
+      new_highlight_line = 0;
+      cursor_pressed = 1;
+    #endif
     }
     break;
 
