@@ -1138,8 +1138,7 @@ widget_filesel_keyhandler( input_key key )
 
   /* If there are no files (possible on the Wii), can't really do anything */
   if( widget_numfiles == 0 ) {
-    //if( key == INPUT_KEY_Escape ) widget_end_widget( WIDGET_FINISHED_CANCEL ); // Only for BOB
-    if( key == INPUT_KEY_Home ) widget_end_widget( WIDGET_FINISHED_CANCEL );
+    if( key == INPUT_KEY_Escape ) widget_end_widget( WIDGET_FINISHED_CANCEL );
     return;
   }
   
@@ -1250,8 +1249,7 @@ widget_filesel_keyhandler( input_key key )
     break;
 
 #ifdef GCWZERO
-  //case INPUT_KEY_Escape: /* Select */ //Only for BOB
-  case INPUT_KEY_Return:    /* Start */   
+  case INPUT_KEY_Escape: /* Select */
     /* Switch on/off apply filters */
     if ( settings_current.od_filter_known_extensions && CURRENT_FILTERS ) {
       last_known_positions[last_filter].apply_filters = !last_known_positions[last_filter].apply_filters;

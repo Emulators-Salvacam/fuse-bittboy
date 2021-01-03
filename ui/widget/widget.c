@@ -915,7 +915,7 @@ ui_popup_menu( int native_key )
 #ifdef GCWZERO
   case INPUT_KEY_Home: /* Power Button GCW0/RG350 */
   case INPUT_KEY_End: /* Power Button RetroFW */
-  //case INPUT_KEY_Escape: /* Select */
+  case INPUT_KEY_Escape: /* Select */
 #endif
   case INPUT_KEY_F1:
     fuse_emulation_pause();
@@ -967,8 +967,7 @@ ui_popup_menu( int native_key )
     break;
 #ifdef VKEYBOARD
 #ifdef GCWZERO
-  //case INPUT_KEY_Return: /*Start*/
-  case INPUT_KEY_Escape: /* Select */ //Only for BOB
+  case INPUT_KEY_Return: /*Start*/
     vkeyboard_enabled = !vkeyboard_enabled;
     /* menu_vkeyboard( 0 ); */
     break;

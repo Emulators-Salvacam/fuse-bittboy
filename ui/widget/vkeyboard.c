@@ -150,8 +150,7 @@ void
 widget_vkeyboard_options_input( input_key key, int press ) {
   if (press) {
     switch (key) {
-    //case INPUT_KEY_Return:    
-    case INPUT_KEY_Escape: /* Select */ //Only for BOB
+    case INPUT_KEY_Return:
       widget_vkeyboard_finish( WIDGET_FINISHED_OK );
       break;
     default:
@@ -184,8 +183,7 @@ widget_input_keyboard( input_key key )
 #endif
 
 #ifdef GCWZERO
-  //case INPUT_KEY_Return: /* Start */
-  case INPUT_KEY_Escape: /* Select */ //Only for BOB
+  case INPUT_KEY_Return: /* Start */
 #else
   case INPUT_KEY_Escape:
   case INPUT_KEY_F11:

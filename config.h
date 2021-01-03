@@ -29,7 +29,7 @@
 #define FUSE_RC_VERSION 1,5,7,0
 
 /* OpenDingux/RetroFW Version */
-#define GCW0_VERSION "0.0.3-BOB for Miyoo"
+#define GCW0_VERSION "0.0.3 for Miyoo"
 
 /* Defined if GCW ZERO is in use */
 #define GCWZERO 1
