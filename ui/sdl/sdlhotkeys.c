@@ -72,7 +72,11 @@ static const char * const od_border[] = {
 #define FLAG_A      0x10
 #define FLAG_B      0x20
 #define FLAG_X      0x40
+#ifdef MIYOO
+#define FLAG_RESET  0x80
+#else
 #define FLAG_Y      0x80
+#endif
 
 /*
   Combos currently are mapped to Fx functions used in Fuse:
@@ -96,7 +100,8 @@ static const char * const od_border[] = {
 
 /*
   Combos for Miyoo:
-    Select + Start   Exit fuse
+    L1 + R1          Exit fuse
+    Reset + Start    Exit fuse
     R + A            Load state - Open file (F3)
     R + B            Save state - Save file (F2)
 
@@ -107,6 +112,7 @@ static const char * const od_border[] = {
 #ifdef MIYOO
 
 #define EXIT            (FLAG_L1|FLAG_R1)
+#define EXITBOB         (FLAG_RESET|FLAG_START)
 #define OPEN_FILES      (FLAG_R1|FLAG_A)
 #define SAVE_FILES      (FLAG_R1|FLAG_B)
 #define FULLSCREEN      (FLAG_L1|FLAG_A)
@@ -200,6 +206,7 @@ push_combo_event( Uint8* flags )
   #ifdef MIYOO
   switch (*flags) {
   case EXIT:
+  case EXITBOB:
     combo_key = SDLK_F10; break;
 
   case OPEN_FILES:
@@ -430,6 +437,16 @@ filter_combo_events( const SDL_Event *event )
         flags |= FLAG_R1;
       break;
     #ifdef MIYOO
+    case SDLK_RCTRL:    /* Reset */
+      if ( flags ) {
+        if ( flags & FLAG_RESET )
+          return (DROP_EVENT); /* Filter Repeat key */
+        else
+          flags |= FLAG_RESET;
+      } else
+        return (PUSH_EVENT);
+      break;
+
     case SDLK_LCTRL:     /* B  */
       if ( flags ) {
         if ( flags & FLAG_B )
@@ -450,15 +467,15 @@ filter_combo_events( const SDL_Event *event )
         return (PUSH_EVENT);
       break;
 
-    case SDLK_SPACE:     /* Y  */
-      if ( flags ) {
-        if ( flags & FLAG_Y )
-          return (DROP_EVENT); /* Filter Repeat key */
-        else
-          flags |= FLAG_Y;
-      } else
-        return (PUSH_EVENT);
-      break;
+//    case SDLK_SPACE:     /* Y  */
+//      if ( flags ) {
+//        if ( flags & FLAG_Y )
+//          return (DROP_EVENT); /* Filter Repeat key */
+//        else
+//          flags |= FLAG_Y;
+//      } else
+//        return (PUSH_EVENT);
+//      break;
 
     case SDLK_LSHIFT:      /* X  */
       if ( flags ) {
