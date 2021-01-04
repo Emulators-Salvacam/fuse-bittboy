@@ -873,18 +873,14 @@ set_joystick_type( int action )
 void
 menu_quicksave( int action )
 {
-  if (quicksave_save())
-    ui_error( UI_ERROR_ERROR, "Error saving state");
-
+  quicksave_save();
   widget_end_all( WIDGET_FINISHED_OK );
 }
 
 void
 menu_quickload( int action )
 {
-  if (quicksave_load())
-    ui_error( UI_ERROR_ERROR, "Error loading state");
-
+  quicksave_load();
   widget_end_all( WIDGET_FINISHED_OK );
 }
 

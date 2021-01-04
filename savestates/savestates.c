@@ -102,6 +102,33 @@ quicksave_get_current_program(void)
   return compat_chop_expressions( re_expressions, utils_last_filename( last_filename, 1 ) );
 }
 
+char*
+quicksave_get_label(void)
+{
+  char* current_program;
+  char* filename;
+  char* label;
+
+  current_program = quicksave_get_current_program();
+  if ( !current_program ) return NULL;
+
+  filename = utils_last_filename( quicksave_get_filename(), 1 );
+  if ( !filename ) {
+    libspectrum_free(current_program);
+    return NULL;
+  }
+
+  label = libspectrum_new(char, 20);
+  snprintf(label,20,"%s: %s",filename,current_program);
+  if ( strlen(current_program) > 15 )
+    memcpy( &(label[18]), ">\0", 2 );
+
+  libspectrum_free(filename);
+  libspectrum_free(current_program);
+
+  return label;
+}
+
 int
 check_if_exist_current_savestate(void)
 {
@@ -115,6 +142,20 @@ check_if_exist_current_savestate(void)
   }
 
   return exist;
+}
+
+int
+check_if_savestate_possible(void)
+{
+  char* current_program;
+  int possible = 0;
+
+  current_program = quicksave_get_current_program();
+  if (current_program) {
+    possible = 1;
+    libspectrum_free( current_program );
+  }
+  return possible;
 }
 
 char*
@@ -138,6 +179,10 @@ int
 quicksave_load(void)
 {
   char* filename;
+  char* slot;
+
+  /* If don't exist savestate return but don't mark error */
+  if (!check_if_exist_current_savestate()) return 0;
 
   fuse_emulation_pause();
 
@@ -151,7 +196,14 @@ quicksave_load(void)
    */
   int error = utils_open_file( filename, 9, NULL );
 
+  slot = utils_last_filename( filename, 1 );
+  if (error)
+    ui_error( UI_ERROR_ERROR, "Error loading state from slot %s", slot );
+  //else
+    //ui_widget_show_msg_update_info("Loaded from slot %s", slot);
+
   libspectrum_free( filename );
+  libspectrum_free( slot );
 
   display_refresh_all();
 
@@ -164,6 +216,7 @@ int
 quicksave_save(void)
 {
   char* filename;
+  char* slot;
 
   fuse_emulation_pause();
 
@@ -174,7 +227,14 @@ quicksave_save(void)
 
   int error = snapshot_write( filename );
 
+  slot = utils_last_filename( filename, 1 );
+  if (error)
+    ui_error( UI_ERROR_ERROR, "Error saving state to slot %s", slot );
+  //else
+    //ui_widget_show_msg_update_info( "Saved to slot %s", slot );
+
   libspectrum_free( filename );
+  libspectrum_free( slot );
 
   fuse_emulation_unpause();
 

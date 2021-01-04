@@ -27,6 +27,7 @@
 #include "settings.h"
 #include "ui/ui.h"
 #include "ui/uidisplay.h"
+#include "savestates/savestates.h"
 #include "ui/hotkeys.h"
 #include "options.h"
 
@@ -35,7 +36,7 @@
 static int combo_done;
 static SDL_Event *combo_keys[MAX_COMBO_KEYS_PENDING];
 static int last_combo_key = 0;
-static int push_combo_event( Uint8* flags );
+static int push_combo_event( Uint16* flags );
 static int filter_combo_done( const SDL_Event *event );
 static int is_combo_possible( const SDL_Event *event );
 
@@ -65,14 +66,18 @@ static const char * const od_border[] = {
 /*
  Current keys used in combos: L1, R1, Select, Start, X, Y, A, B
 */
-#define FLAG_SELECT 0x01
-#define FLAG_START  0x02
-#define FLAG_L1     0x04
-#define FLAG_R1     0x08
-#define FLAG_A      0x10
-#define FLAG_B      0x20
-#define FLAG_X      0x40
-#define FLAG_Y      0x80
+#define FLAG_SELECT 0x0001
+#define FLAG_START  0x0002
+#define FLAG_L1     0x0004
+#define FLAG_R1     0x0008
+#define FLAG_A      0x0010
+#define FLAG_B      0x0020
+#define FLAG_X      0x0040
+#define FLAG_Y      0x0080
+#define FLAG_UP     0X0100
+#define FLAG_DOWN   0x0200
+#define FLAG_LEFT   0x0400
+#define FLAG_RIGHT  0x0800
 
 /*
   Combos currently are mapped to Fx functions used in Fuse:
@@ -107,11 +112,16 @@ static const char * const od_border[] = {
 #ifdef MIYOO
 
 #define EXIT            (FLAG_L1|FLAG_R1)
-#define OPEN_FILES      (FLAG_R1|FLAG_A)
-#define SAVE_FILES      (FLAG_R1|FLAG_B)
 #define FULLSCREEN      (FLAG_L1|FLAG_A)
 #define CHANGE_BORDER   (FLAG_L1|FLAG_B)
 #define STATUS_BAR      (FLAG_L1|FLAG_X)
+
+#define QUICK_LOAD      (FLAG_R1|FLAG_A)
+#define QUICK_SAVE      (FLAG_R1|FLAG_B)
+
+#define INCREASE_SLOT   (FLAG_R1|FLAG_RIGHT)
+#define DECREASE_SLOT   (FLAG_R1|FLAG_LEFT)
+
 
 #else
 
@@ -130,6 +140,12 @@ static const char * const od_border[] = {
 #define SAVE_FILES      (FLAG_L1|FLAG_B)
 #define OPEN_FILES      (FLAG_L1|FLAG_X)
 #define OPEN_MEDIA      (FLAG_L1|FLAG_Y)
+
+#define QUICK_LOAD      (FLAG_R1|FLAG_UP)
+#define INCREASE_SLOT   (FLAG_R1|FLAG_RIGHT)
+#define DECREASE_SLOT   (FLAG_R1|FLAG_LEFT)
+
+#define QUICK_SAVE      (FLAG_L1|FLAG_DOWN)
 
 #endif
 
@@ -183,7 +199,7 @@ filter_combo_done( const SDL_Event *event )
 }
 
 int
-push_combo_event( Uint8* flags )
+push_combo_event( Uint16* flags )
 {
   SDL_Event combo_event;
   SDLKey combo_key = 0;
@@ -191,6 +207,9 @@ push_combo_event( Uint8* flags )
   int change_border = 0;
   int fullscreen = 0;
   int status_bar = 0;
+  int increase_save_slot = 0;
+  int quicksave = 0;
+  int quickload = 0;
 
   /* Nothing to do */
   if ( !flags ) return 0;
@@ -202,12 +221,6 @@ push_combo_event( Uint8* flags )
   case EXIT:
     combo_key = SDLK_F10; break;
 
-  case OPEN_FILES:
-    combo_key = SDLK_F3; break;
-
-  case SAVE_FILES:
-    combo_key = SDLK_F2; break;
-
   case FULLSCREEN:
     fullscreen = 1; break;
 
@@ -217,6 +230,17 @@ push_combo_event( Uint8* flags )
   case CHANGE_BORDER:
     change_border = 1; break;
 
+  case INCREASE_SLOT:
+    increase_save_slot = 1; break;
+
+  case DECREASE_SLOT:
+    increase_save_slot = -1; break;
+
+  case QUICK_SAVE:
+    quicksave = 1; break;
+
+  case QUICK_LOAD:
+    quickload = 1; break;
   default:
     break;
   }
@@ -258,6 +282,18 @@ push_combo_event( Uint8* flags )
   case RESET:
     combo_key = SDLK_F5; break;
 
+  case INCREASE_SLOT:
+    increase_save_slot = 1; break;
+
+  case DECREASE_SLOT:
+    increase_save_slot = -1; break;
+
+  case QUICK_SAVE:
+    quicksave = 1; break;
+
+  case QUICK_LOAD:
+    quickload = 1; break;
+
   default:
     break;
   }
@@ -276,7 +312,7 @@ push_combo_event( Uint8* flags )
     SDL_PushEvent( &combo_event );
 
     /* Clean flags and mark combo as done */
-    *flags = 0x00;
+    *flags = 0x0000;
     combo_done = 1;
     return 1;
 
@@ -285,7 +321,7 @@ push_combo_event( Uint8* flags )
     settings_current.od_triple_buffer = !settings_current.od_triple_buffer;
 
     /* Clean flags and mark combo as done */
-    *flags = 0x00;
+    *flags = 0x0000;
     combo_done = 1;
     return 1;
 
@@ -319,7 +355,7 @@ push_combo_event( Uint8* flags )
 #endif
 
     /* Clean flags and mark combo as done */
-    *flags = 0x00;
+    *flags = 0x0000;
     combo_done = 1;
 
     #ifdef MIYOO
@@ -336,7 +372,7 @@ push_combo_event( Uint8* flags )
     settings_current.od_fullscreen = !settings_current.od_fullscreen;
 
     /* Clean flags and mark combo as done */
-    *flags = 0x00;
+    *flags = 0x0000;
     combo_done = 1;
 
     /* make the needed UI changes */
@@ -352,13 +388,39 @@ push_combo_event( Uint8* flags )
     settings_current.statusbar = !settings_current.statusbar;
 
     /* Clean flags and mark combo as done */
-    *flags = 0x00;
+    *flags = 0x0000;
     combo_done = 1;
     #ifdef MIYOO
     uidisplay_hotswap_statusbar();
     #else
     uidisplay_hotswap_gfx_mode();
     #endif
+    return 1;
+
+  } else if (increase_save_slot ) {
+    if ( increase_save_slot > 0 ) {
+      if ( settings_current.od_quicksave_slot < 99 ) settings_current.od_quicksave_slot++;
+    } else if ( settings_current.od_quicksave_slot ) settings_current.od_quicksave_slot--;
+
+    //ui_widget_show_msg_update_info("Savestate slot set to %d", settings_current.od_quicksave_slot);
+
+    /* Clean flags and mark combo as done */
+    *flags = 0x0000;
+    combo_done = 1;
+    return 1;
+
+  } else if (quicksave) {
+    quicksave_save();
+    /* Clean flags and mark combo as done */
+    *flags = 0x0000;
+    combo_done = 1;
+    return 1;
+
+  } else if (quickload) {
+    quicksave_load();
+    /* Clean flags and mark combo as done */
+    *flags = 0x0000;
+    combo_done = 1;
     return 1;
   /* Nothing to do */
   }
@@ -385,7 +447,7 @@ push_combo_event( Uint8* flags )
 int
 filter_combo_events( const SDL_Event *event )
 {
-  static Uint8  flags  = 0;
+  static Uint16  flags  = 0;
   int i, not_in_combo  = 0;
 
   /* Filter release of combo keys */
@@ -510,6 +572,46 @@ filter_combo_events( const SDL_Event *event )
         return (PUSH_EVENT);
       break;
     #endif
+    case SDLK_UP:      /* Up */
+      if ( flags ) {
+        if ( flags & FLAG_UP)
+          return (DROP_EVENT); /* Filter Repeat key */
+        else
+          flags |= FLAG_UP;
+      } else
+        return (PUSH_EVENT);
+      break;
+
+    case SDLK_DOWN:      /* Down */
+      if ( flags ) {
+        if ( flags & FLAG_DOWN)
+          return (DROP_EVENT); /* Filter Repeat key */
+        else
+          flags |= FLAG_DOWN;
+      } else
+        return (PUSH_EVENT);
+      break;
+
+    case SDLK_LEFT:      /* Left */
+      if ( flags ) {
+        if ( flags & FLAG_LEFT)
+          return (DROP_EVENT); /* Filter Repeat key */
+        else
+          flags |= FLAG_LEFT;
+      } else
+        return (PUSH_EVENT);
+      break;
+
+    case SDLK_RIGHT:      /* Right */
+      if ( flags ) {
+        if ( flags & FLAG_RIGHT)
+          return (DROP_EVENT); /* Filter Repeat key */
+        else
+          flags |= FLAG_RIGHT;
+      } else
+        return (PUSH_EVENT);
+      break;
+
     /* Key not in combo */
     default:
       not_in_combo = 1;
@@ -553,6 +655,49 @@ filter_combo_events( const SDL_Event *event )
     case SDLK_LALT:    /* B  */
       if ( flags & FLAG_B )
         flags &= ~FLAG_B;
+      else
+        return (PUSH_EVENT);
+      break;
+   break;
+
+    case SDLK_SPACE:      /* X  */
+      if ( flags & FLAG_X )
+        flags &= ~FLAG_X;
+      else
+        return (PUSH_EVENT);
+      break;
+
+    case SDLK_LSHIFT:    /* Y  */
+      if ( flags & FLAG_Y )
+        flags &= ~FLAG_Y;
+      else
+        return (PUSH_EVENT);
+      break;
+
+    case SDLK_UP:      /* Up  */
+      if ( flags & FLAG_UP )
+        flags &= ~FLAG_UP;
+      else
+        return (PUSH_EVENT);
+      break;
+
+    case SDLK_DOWN:    /* Down  */
+      if ( flags & FLAG_DOWN )
+        flags &= ~FLAG_DOWN;
+      else
+        return (PUSH_EVENT);
+      break;
+
+    case SDLK_LEFT:      /* Left  */
+      if ( flags & FLAG_LEFT )
+        flags &= ~FLAG_LEFT;
+      else
+        return (PUSH_EVENT);
+      break;
+
+    case SDLK_RIGHT:    /* Right  */
+      if ( flags & FLAG_RIGHT )
+        flags &= ~FLAG_RIGHT;
       else
         return (PUSH_EVENT);
       break;
