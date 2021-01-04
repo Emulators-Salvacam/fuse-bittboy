@@ -246,6 +246,12 @@ utils_open_file( const char *filename, int autoload,
   if( type_ptr ) *type_ptr = type;
 
 #if GCWZERO
+  /*
+   * Dirty hack for savesstates.
+   * autoload is set to 9 for load from loadstates and avoid changing last
+   * loaded filename and controlmapping files
+   */
+  if(autoload != 9)
   utils_set_last_loaded_file( filename, class, 0 );
 #endif
 
