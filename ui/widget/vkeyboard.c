@@ -187,7 +187,11 @@ widget_input_keyboard( input_key key )
 #endif
 
 #ifdef GCWZERO
+  #ifdef BOB
+  case INPUT_KEY_Escape: /* Select */ //Only for BOB
+  #else
   case INPUT_KEY_Return: /* Start */
+  #endif
 #else
   case INPUT_KEY_Escape:
   case INPUT_KEY_F11:
