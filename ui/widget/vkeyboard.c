@@ -150,7 +150,11 @@ void
 widget_vkeyboard_options_input( input_key key, int press ) {
   if (press) {
     switch (key) {
+    #ifdef BOB
+    case INPUT_KEY_Escape: /* Select */ //Only for BOB
+    #else
     case INPUT_KEY_Return:
+    #endif
       widget_vkeyboard_finish( WIDGET_FINISHED_OK );
       break;
     default:

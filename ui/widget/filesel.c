@@ -1138,7 +1138,11 @@ widget_filesel_keyhandler( input_key key )
 
   /* If there are no files (possible on the Wii), can't really do anything */
   if( widget_numfiles == 0 ) {
-    if( key == INPUT_KEY_Escape ) widget_end_widget( WIDGET_FINISHED_CANCEL );
+    #ifdef BOB
+    if( key == INPUT_KEY_Escape ) widget_end_widget( WIDGET_FINISHED_CANCEL ); 
+    #else
+    if( key == INPUT_KEY_Home ) widget_end_widget( WIDGET_FINISHED_CANCEL ); // Only for BOB
+    #endif
     return;
   }
   

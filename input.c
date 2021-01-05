@@ -277,8 +277,13 @@ input_event_gcw0( const input_event_t *event ) {
       }
     }
 
+    #ifdef BOB
+    /* Virtual Keyboard toggle with Select key */
+    if ( event->type == INPUT_EVENT_KEYPRESS && event->types.key.native_key == INPUT_KEY_Escape ) { // Only for BOB Version
+    #else
     /* Virtual Keyboard toggle with Start key */
     if ( event->type == INPUT_EVENT_KEYPRESS && event->types.key.native_key == INPUT_KEY_Return ) {
+    #endif
       vkeyboard_enabled = !vkeyboard_enabled;
       return 0;
     }

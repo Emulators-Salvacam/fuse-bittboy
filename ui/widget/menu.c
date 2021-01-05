@@ -473,7 +473,11 @@ widget_menu_keyhandler( input_key key )
 #endif
 
 #ifdef GCWZERO
+  #ifdef BOB
+  case INPUT_KEY_Home: /* Reset */ // Only for BOB
+  #else
   case INPUT_KEY_Escape: /* Select */
+  #endif
     widgets_to_end = 0;
     last_mapping_button_line = 0;
     if ( in_control_mapping_defaults ) {

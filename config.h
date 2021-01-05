@@ -34,7 +34,9 @@
 /* Defined if GCW ZERO is in use */
 #define GCWZERO 1
 #define MIYOO 1
-
+/*
+#define BOB 1
+*/
 /* Define to 1 if you have the `dirname' function. */
 #define HAVE_DIRNAME 1
 
