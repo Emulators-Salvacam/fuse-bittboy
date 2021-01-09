@@ -143,7 +143,9 @@ static SDL_Rect vkeyboard_position_large_border[4] = {
 
 #ifdef GCWZERO
 size_t od_info_length;
-static SDL_Surface *od_status_line_ovelay;
+size_t od_msg_info_length;
+size_t frames_since_last_overlay_message_info = 0;
+static SDL_Surface *od_status_line_overlay;
 static SDL_Surface *red_cassette[4], *green_cassette[4];
 static SDL_Surface *red_mdr[4], *green_mdr[4];
 static SDL_Surface *red_disk[4], *green_disk[4];
@@ -303,15 +305,16 @@ typedef struct od_s_icon_positions_Miyoo {
   SDL_Rect     icon_disk;
   SDL_Rect     icon_mdr;
   SDL_Rect     icon_cassette;
+  SDL_Rect     status_line;
 } od_t_icon_positions_Miyoo;
 
 static od_t_icon_positions_Miyoo od_icon_positions_Miyoo[] = {
   //     icon_disk           icon_mdr           icon_cassette
-  { { 246, 218, 0, 0 }, { 267, 218, 0, 0 }, { 288, 220, 0, 0 } }, //Full
-  { { 256, 209, 0, 0 }, { 266, 209, 0, 0 }, { 276, 211, 0, 0 } }, //Medium
-  { { 248, 203, 0, 0 }, { 258, 203, 0, 0 }, { 268, 205, 0, 0 } }, //Small
-  { { 243, 199, 0, 0 }, { 253, 199, 0, 0 }, { 263, 201, 0, 0 } }, //Minium
-  { { 240, 196, 0, 0 }, { 250, 196, 0, 0 }, { 260, 198, 0, 0 } }  //Fullscreen
+  { { 246, 218, 0, 0 }, { 267, 218, 0, 0 }, { 288, 220, 0, 0 }, {  5, 225, 20, 10 } }, //Full
+  { { 256, 209, 0, 0 }, { 266, 209, 0, 0 }, { 276, 211, 0, 0 }, { 20, 218, 20, 10 } }, //Medium
+  { { 248, 203, 0, 0 }, { 258, 203, 0, 0 }, { 268, 205, 0, 0 }, { 25, 210, 18, 10 } }, //Small
+  { { 243, 199, 0, 0 }, { 253, 199, 0, 0 }, { 263, 201, 0, 0 }, { 30, 205, 17, 10 } }, //Minium
+  { { 240, 196, 0, 0 }, { 250, 196, 0, 0 }, { 260, 198, 0, 0 }, { 35, 205, 16, 10 } }  //Fullscreen
 };
 #endif
 
@@ -334,6 +337,7 @@ static od_t_icon_positions od_icon_positions_new[] = {
 #endif
 
 static od_t_icon_positions od_icon_position;
+int od_show_msg_info = 0;
 #endif
 
 static int image_width;
@@ -349,9 +353,10 @@ static int sdldisplay_allocate_colours_alpha( int numColours, Uint32 *colour_val
                                              Uint32 *bw_values );
 #endif
 #if GCWZERO 
-#ifndef MIYOO
+typedef void (*widget_overlay_callback_fn)( void );
+static void uidisplay_area_overlay( SDL_Surface* area, int length, widget_overlay_callback_fn print_info );
 static void uidisplay_status_overlay( void );
-#endif
+static void uidisplay_show_msg_info_overlay( void );
 #endif
 
 static int sdldisplay_load_gfx_mode( void );
@@ -904,9 +909,9 @@ sdldisplay_load_gfx_mode( void )
 #endif
 
 #ifdef GCWZERO
-  if ( od_status_line_ovelay ) {
-    SDL_FreeSurface( od_status_line_ovelay );
-    od_status_line_ovelay = NULL;
+  if ( od_status_line_overlay ) {
+    SDL_FreeSurface( od_status_line_overlay );
+    od_status_line_overlay = NULL;
   }
 #endif
 
@@ -1087,7 +1092,7 @@ sdldisplay_load_gfx_mode( void )
     fprintf( stderr, "%s: couldn't create status line overlay screen\n", fuse_progname );
     fuse_abort();
   }
-  od_status_line_ovelay = SDL_DisplayFormatAlpha( od_tmp_screen );
+  od_status_line_overlay = SDL_DisplayFormatAlpha( od_tmp_screen );
   SDL_FreeSurface( od_tmp_screen );
 #endif
 
@@ -1188,9 +1193,9 @@ uidisplay_hotswap_gfx_mode( void )
 #endif
 
 #ifdef GCWZERO
-  if ( od_status_line_ovelay ) {
-    SDL_FreeSurface( od_status_line_ovelay );
-    od_status_line_ovelay = NULL;
+  if ( od_status_line_overlay ) {
+    SDL_FreeSurface( od_status_line_overlay );
+    od_status_line_overlay = NULL;
   }
 #endif
 
@@ -1526,24 +1531,64 @@ uidisplay_putpixel_alpha( int x, int y, int colour ) {
   }
 }
 
-#ifndef MIYOO
 static void
-uidisplay_status_overlay( void ) {
+uidisplay_area_overlay( SDL_Surface* area, int length, widget_overlay_callback_fn print_info ) {
+  
+  #ifdef MIYOO
+  int scale = 1;
+  
+  SDL_Rect r1 = { od_icon_positions_Miyoo[4].status_line.x, od_icon_positions_Miyoo[4].status_line.y,
+                  od_icon_positions_Miyoo[4].status_line.w, od_icon_positions_Miyoo[4].status_line.h };   
+  
+  if (!settings_current.od_fullscreen)
+  {
+    if (strncmp(settings_current.od_border,"Full", 4 ) == 0)
+    {
+      r1.x = od_icon_positions_Miyoo[0].status_line.x;
+      r1.y = od_icon_positions_Miyoo[0].status_line.y;
+      r1.w = od_icon_positions_Miyoo[0].status_line.w;
+      r1.h = od_icon_positions_Miyoo[0].status_line.h;
+    }
+    else if (strncmp(settings_current.od_border,"Medium", 4 ) == 0)
+    {
+      r1.x = od_icon_positions_Miyoo[1].status_line.x;
+      r1.y = od_icon_positions_Miyoo[1].status_line.y;
+      r1.w = od_icon_positions_Miyoo[1].status_line.w;
+      r1.h = od_icon_positions_Miyoo[1].status_line.h;
+    }
+    else if (strncmp(settings_current.od_border,"Small", 4 ) == 0)
+    {
+      r1.x = od_icon_positions_Miyoo[2].status_line.x;
+      r1.y = od_icon_positions_Miyoo[2].status_line.y;
+      r1.w = od_icon_positions_Miyoo[2].status_line.w;
+      r1.h = od_icon_positions_Miyoo[2].status_line.h;
+    }
+    else if (strncmp(settings_current.od_border,"Minium", 4 ) == 0)
+    {
+      r1.x = od_icon_positions_Miyoo[3].status_line.x;
+      r1.y = od_icon_positions_Miyoo[3].status_line.y;
+      r1.w = od_icon_positions_Miyoo[3].status_line.w;
+      r1.h = od_icon_positions_Miyoo[3].status_line.h;
+    }
+  }
+
+  #else
   int scale = ( libspectrum_machine_capabilities( machine_current->machine ) & LIBSPECTRUM_MACHINE_CAPABILITY_TIMEX_VIDEO ) ? 2 : 1;
 
   SDL_Rect r1 = { od_icon_position.status_line.x * scale, od_icon_position.status_line.y * scale,
                   od_icon_position.status_line.w * scale, od_icon_position.status_line.h * scale };
+  #endif
 
-  SDL_Rect r2 = { 0, 0, ( od_info_length + 3 ) * scale, od_icon_position.status_line.h * scale };
+  SDL_Rect r2 = { 0, 0, ( length + 3 ) * scale, od_icon_position.status_line.h * scale };
 
-  SDL_FillRect(od_status_line_ovelay, NULL, settings_current.bw_tv ? bw_values_a[18] : colour_values_a[18]);
-  SDL_FillRect(od_status_line_ovelay, &r2, settings_current.bw_tv ? bw_values_a[17] : colour_values_a[17]);
+  SDL_FillRect(area, NULL, settings_current.bw_tv ? bw_values_a[18] : colour_values_a[18]);
+  SDL_FillRect(area, &r2, settings_current.bw_tv ? bw_values_a[17] : colour_values_a[17]);
 
-  overlay_alpha_surface = od_status_line_ovelay;
-  ui_widget_statusbar_print_info();
+  overlay_alpha_surface = area;
+  print_info();
   overlay_alpha_surface = NULL;
 
-  SDL_BlitSurface(od_status_line_ovelay, NULL, tmp_screen, &r1);
+  SDL_BlitSurface(area, NULL, tmp_screen, &r1);
 
   updated_rects[num_rects].x = r1.x;
   updated_rects[num_rects].y = r1.y;
@@ -1551,9 +1596,30 @@ uidisplay_status_overlay( void ) {
   updated_rects[num_rects].h = r1.h;
   num_rects++;
 
+  #ifdef MIYOO
+  display_refresh_rect( r1.x - 1 * scale, r1.y - 1 * scale, r2.w + 8 * scale, r1.h + 1 * scale, 1 );
+  #else
   display_refresh_rect( r1.x - 1 * scale, r1.y - 1 * scale, r1.w + 8 * scale, r1.h + 1 * scale, 1 );
+  #endif
 }
-#endif // Miyoo
+
+static void
+uidisplay_status_overlay( void ) {
+  uidisplay_area_overlay(od_status_line_overlay, od_info_length, widget_statusbar_print_info);
+}
+
+static void
+uidisplay_show_msg_info_overlay(void) {
+  /* 150 frames. 3 seconds */
+
+  fprintf( stderr, "%i: frames_since_last_overlay_message_info x\n", frames_since_last_overlay_message_info);
+  if ( frames_since_last_overlay_message_info > 150 ) {
+    od_show_msg_info = 0;
+    return;
+  }
+
+  uidisplay_area_overlay(od_status_line_overlay, od_msg_info_length, widget_show_msg_print_info);
+}
 #endif
 
 #if VKEYBOARD
@@ -1834,13 +1900,13 @@ uidisplay_frame_end( void )
 #endif
 
 //Miyoo
-#ifndef MIYOO
 #ifdef GCWZERO
-  if ( settings_current.statusbar && ui_widget_level == -1 &&
+  if (od_show_msg_info)
+    uidisplay_show_msg_info_overlay();
+  else if ( settings_current.statusbar && ui_widget_level == -1 &&
        ( !sdldisplay_current_od_border || settings_current.od_statusbar_with_border ) )
     uidisplay_status_overlay();
 
-#endif
 #endif
 
   /* Force a full redraw if requested */
@@ -1860,7 +1926,7 @@ uidisplay_frame_end( void )
   if ( !(ui_widget_level >= 0) && num_rects == 0 && !sdl_status_updated )
     return;
   
-  //Miyoo va bien el fullscreen pero no el status bar
+  //Miyoo 
   #ifdef MIYOO
     uidisplay_fullscreen();
   #endif
@@ -1993,9 +2059,9 @@ uidisplay_end( void )
 #endif
 
 #ifdef GCWZERO
-  if ( od_status_line_ovelay ) {
-    SDL_FreeSurface( od_status_line_ovelay );
-    od_status_line_ovelay = NULL;
+  if ( od_status_line_overlay ) {
+    SDL_FreeSurface( od_status_line_overlay );
+    od_status_line_overlay = NULL;
   }
 #endif
 

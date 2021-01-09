@@ -402,7 +402,7 @@ push_combo_event( Uint16* flags )
       if ( settings_current.od_quicksave_slot < 99 ) settings_current.od_quicksave_slot++;
     } else if ( settings_current.od_quicksave_slot ) settings_current.od_quicksave_slot--;
 
-    //ui_widget_show_msg_update_info("Savestate slot set to %d", settings_current.od_quicksave_slot);
+    ui_widget_show_msg_update_info("Savestate slot set to %d", settings_current.od_quicksave_slot);
 
     /* Clean flags and mark combo as done */
     *flags = 0x0000;

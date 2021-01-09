@@ -199,8 +199,8 @@ quicksave_load(void)
   slot = utils_last_filename( filename, 1 );
   if (error)
     ui_error( UI_ERROR_ERROR, "Error loading state from slot %s", slot );
-  //else
-    //ui_widget_show_msg_update_info("Loaded from slot %s", slot);
+  else
+    ui_widget_show_msg_update_info("Loaded from slot %s", slot);
 
   libspectrum_free( filename );
   libspectrum_free( slot );
@@ -230,8 +230,8 @@ quicksave_save(void)
   slot = utils_last_filename( filename, 1 );
   if (error)
     ui_error( UI_ERROR_ERROR, "Error saving state to slot %s", slot );
-  //else
-    //ui_widget_show_msg_update_info( "Saved to slot %s", slot );
+  else
+    ui_widget_show_msg_update_info( "Saved to slot %s", slot );
 
   libspectrum_free( filename );
   libspectrum_free( slot );
