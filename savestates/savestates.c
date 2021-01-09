@@ -175,6 +175,28 @@ quicksave_get_filename(void)
   return utils_safe_strdup( buffer );
 }
 
+char*
+get_savestate_last_chage(void) {
+  compat_fd save_state_fd;
+  char* last_change;
+
+  if ( !check_if_exist_current_savestate() )
+    return NULL;
+
+  save_state_fd = compat_file_open( quicksave_get_filename(), 0 );
+  if ( !save_state_fd )
+    return NULL;
+
+  last_change = compat_file_get_time_last_change( save_state_fd );
+  compat_file_close( save_state_fd );
+
+  /* Get rid of \n */
+  if ( last_change )
+    last_change[ strlen( last_change ) - 1 ] = '\0';
+
+  return last_change;
+}
+
 int
 quicksave_load(void)
 {
@@ -200,7 +222,7 @@ quicksave_load(void)
   if (error)
     ui_error( UI_ERROR_ERROR, "Error loading state from slot %s", slot );
   else
-    ui_widget_show_msg_update_info("Loaded from slot %s", slot);
+    ui_widget_show_msg_update_info( "Loaded slot %s (%s)", slot, get_savestate_last_chage() );
 
   libspectrum_free( filename );
   libspectrum_free( slot );
@@ -231,7 +253,7 @@ quicksave_save(void)
   if (error)
     ui_error( UI_ERROR_ERROR, "Error saving state to slot %s", slot );
   else
-    ui_widget_show_msg_update_info( "Saved to slot %s", slot );
+    ui_widget_show_msg_update_info( "Saved to slot %s (%s)", slot, get_savestate_last_chage() );
 
   libspectrum_free( filename );
   libspectrum_free( slot );
