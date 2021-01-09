@@ -75,7 +75,11 @@ savestate_write_internal( int slot )
   if ( error )
     ui_error( UI_ERROR_ERROR, "Error saving state to slot %02d", slot );
   else
+    #ifdef MIYOO    
+    ui_widget_show_msg_update_info( "Saved to slot %02d", slot );
+    #else
     ui_widget_show_msg_update_info( "Saved to slot %02d (%s)", slot, get_savestate_last_change( slot ) );
+    #endif
 
   libspectrum_free( filename );
 
@@ -102,7 +106,12 @@ savestate_read_internal( int slot )
   if (error)
     ui_error( UI_ERROR_ERROR, "Error loading state from slot %02d", slot );
   else
+
+    #ifdef MIYOO    
+    ui_widget_show_msg_update_info( "Loaded slot %02d", slot );
+    #else
     ui_widget_show_msg_update_info( "Loaded slot %02d (%s)", slot, get_savestate_last_change( slot ) );
+    #endif
 
   libspectrum_free( filename );
 
@@ -332,7 +341,7 @@ check_any_savestate_exist(void)
   } else if ( !last_check_directory_result ) {
     last_check_directory_result = scan_directory_for_savestates( savestate_dir, is_savestate_name );
   }
-  
+
   libspectrum_free( savestate_dir );
 
   return last_check_directory_result;
