@@ -24,6 +24,7 @@
 #include <mntent.h>
 #include <unistd.h>
 #include <libspectrum.h>
+#include <ctype.h>
 
 #include "fuse.h"
 #include "snapshot.h"
@@ -38,6 +39,9 @@
 static const char* re_expressions[] = {
     "(([[:space:]]|[-_])*)(([(]|[[])*[[:space:]]*)(disk|tape|side|part)(([[:space:]]|[[:punct:]])*)(([abcd1234])([[:space:]]*of[[:space:]]*[1234])*)([[:space:]]*([)]|[]])*)(([[:space:]]|[-_])*)",
     NULL };
+
+static char* last_check_directory = NULL;
+static int last_check_directory_result = 0;
 
 static int
 check_dir_exist(char* dir)
@@ -55,6 +59,137 @@ check_dir_exist(char* dir)
   }
 
   return 1;
+}
+
+static int
+savestate_write_internal( int slot )
+{
+  char* filename;
+
+  filename = quicksave_get_filename( slot );
+  if ( !filename ) return 1;
+
+  if ( quicksave_create_dir() ) return 1;
+
+  int error = snapshot_write( filename );
+  if ( error )
+    ui_error( UI_ERROR_ERROR, "Error saving state to slot %02d", slot );
+  else
+    ui_widget_show_msg_update_info( "Saved to slot %02d (%s)", slot, get_savestate_last_change( slot ) );
+
+  libspectrum_free( filename );
+
+  return error;
+}
+
+static int
+savestate_read_internal( int slot )
+{
+  char* filename;
+
+  /* If don't exist savestate return */
+  if ( !check_current_savestate_exist( slot ) ) return 1;
+
+  filename = quicksave_get_filename( slot );
+  if ( !filename ) return 1;
+
+  /*
+   * Dirty hack for savesstates.
+   * autoload is set to 9 for load from loadstates and avoid changing last
+   * loaded filename and controlmapping files
+   */
+  int error = utils_open_file( filename, 9, NULL );
+  if (error)
+    ui_error( UI_ERROR_ERROR, "Error loading state from slot %02d", slot );
+  else
+    ui_widget_show_msg_update_info( "Loaded slot %02d (%s)", slot, get_savestate_last_change( slot ) );
+
+  libspectrum_free( filename );
+
+  return error;
+}
+
+static int
+is_savestate_name( const char* name )
+{
+  char* filename;
+  char* extension;
+
+  if ( !name ) return 0;
+
+  /* Compare if name is valid */
+  filename = utils_last_filename( name, 0 );
+  if ( !filename ) return 0;
+
+  /* nn.xxx */
+  if ( strlen( filename ) != 6 ) {
+    libspectrum_free( filename );
+    return 0;
+  }
+
+  /* Verify that extension is the configured for savestates */
+  extension = strrchr( filename, '.' );
+  if ( extension ) {
+    if ( strncmp( extension, settings_current.od_quicksave_format, 4 ) ) {
+      libspectrum_free( filename );
+      return 0;
+    }
+  } else {
+    libspectrum_free( filename );
+    return 0;
+  }
+
+  /* Verify that the name are digits */
+  if ( !isdigit( filename[0] ) || !isdigit( filename[1]) ) {
+    libspectrum_free( filename );
+    return 0;
+  }
+
+  libspectrum_free( filename );
+
+  /* Name is OK */
+  return 1;
+}
+
+static int
+scan_directory_for_savestates( const char* dir, int (*check_fn)(const char*) )
+{
+  compat_dir directory;
+  int done = 0;
+  int exist = 0;
+
+  if ( !dir ) return 0;
+
+  directory = compat_opendir( dir );
+  if( !directory ) return 0;
+
+  while( !done ) {
+    char name[ PATH_MAX ];
+
+    compat_dir_result_t result = compat_readdir( directory, name, sizeof( name ) );
+
+    switch( result ) {
+    case COMPAT_DIR_RESULT_OK:
+      if ( check_fn( name ) ) {
+        exist = 1;
+        done = 1;
+      }
+      break;
+
+    case COMPAT_DIR_RESULT_END:
+      done = 1;
+      break;
+
+    case COMPAT_DIR_RESULT_ERROR:
+      compat_closedir( directory );
+      return 0;
+    }
+  }
+
+  if( compat_closedir( directory ) )
+    return 0;
+
+  return exist;
 }
 
 char*
@@ -178,31 +313,29 @@ check_current_savestate_exist_savename( char* savename )
 int
 check_any_savestate_exist(void)
 {
-  char* filename;
   char* savestate_dir;
-  int i;
-  int exist = 0;
 
   /* Can not determine savestate_dir */
   savestate_dir = quicksave_get_current_dir();
   if( !savestate_dir ) return 0;
 
-  if ( !check_dir_exist(savestate_dir) ) {
+  if ( !check_dir_exist( savestate_dir ) ) {
     libspectrum_free(savestate_dir);
     return 0;
   }
-  libspectrum_free(savestate_dir);
 
-  for ( i=0; i < 100; i++ ) {
-    filename = quicksave_get_filename(i);
-    if (filename) {
-      exist = compat_file_exists( filename ) ? 1 : 0;
-      libspectrum_free(filename);
-      if (exist) break;
-    }
+  /* Is directory previously checked? */
+  if ( !last_check_directory || strcmp( savestate_dir, last_check_directory ) ) {
+    last_check_directory = utils_safe_strdup( savestate_dir );
+    last_check_directory_result = 0;
+  /* If directory contain savestates previously */
+  } else if ( !last_check_directory_result ) {
+    last_check_directory_result = scan_directory_for_savestates( savestate_dir, is_savestate_name );
   }
+  
+  libspectrum_free( savestate_dir );
 
-  return exist;
+  return last_check_directory_result;
 }
 
 int
@@ -264,36 +397,13 @@ get_savestate_last_change(int slot) {
 int
 quicksave_load(void)
 {
-  char* filename;
-  char* slot;
-
   /* If don't exist savestate return but don't mark error */
-  if (!check_current_savestate_exist(settings_current.od_quicksave_slot)) return 0;
+  if ( !check_current_savestate_exist( settings_current.od_quicksave_slot ) )
+    return 0;
 
   fuse_emulation_pause();
 
-  filename = quicksave_get_filename(settings_current.od_quicksave_slot);
-  if (!filename) { fuse_emulation_unpause(); return 1; }
-
-  /*
-   * Dirty hack for savesstates.
-   * autoload is set to 9 for load from loadstates and avoid changing last
-   * loaded filename and controlmapping files
-   */
-  int error = utils_open_file( filename, 9, NULL );
-
-  slot = utils_last_filename( filename, 1 );
-  if (error)
-    ui_error( UI_ERROR_ERROR, "Error loading state from slot %s", slot );
-  else
-    #ifdef MIYOO
-    ui_widget_show_msg_update_info( "Loaded slot %s", slot );
-    #else
-    ui_widget_show_msg_update_info( "Loaded slot %s (%s)", slot, get_savestate_last_chage(atoi(slot)) );
-    #endif
-
-  libspectrum_free( filename );
-  libspectrum_free( slot );
+  int error = savestate_read_internal( settings_current.od_quicksave_slot );
 
   display_refresh_all();
 
@@ -305,30 +415,9 @@ quicksave_load(void)
 int
 quicksave_save(void)
 {
-  char* filename;
-  char* slot;
-
   fuse_emulation_pause();
 
-  filename = quicksave_get_filename(settings_current.od_quicksave_slot);
-  if (!filename) { fuse_emulation_unpause(); return 1; }
-
-  if (quicksave_create_dir()) { fuse_emulation_unpause(); return 1; }
-
-  int error = snapshot_write( filename );
-
-  slot = utils_last_filename( filename, 1 );
-  if (error)
-    ui_error( UI_ERROR_ERROR, "Error saving state to slot %s", slot );
-  else
-    #ifdef MIYOO
-    ui_widget_show_msg_update_info( "Saved to slot %s", slot );
-    #else
-    ui_widget_show_msg_update_info( "Saved to slot %s (%s)", slot, get_savestate_last_chage(atoi(slot)) );
-    #endif
-
-  libspectrum_free( filename );
-  libspectrum_free( slot );
+  int error = savestate_write_internal( settings_current.od_quicksave_slot );
 
   fuse_emulation_unpause();
 
@@ -339,65 +428,29 @@ int
 savestate_read( const char *savestate )
 {
   char* slot;
-  char* filename;
 
   slot = utils_last_filename( savestate, 1 );
   if ( !slot ) return 1;
 
   settings_current.od_quicksave_slot = atoi( slot );
 
-  /* If don't exist savestate return but don't mark error */
-  if (!check_current_savestate_exist(settings_current.od_quicksave_slot)) {
-    libspectrum_free( slot );
-    return 1;
-  }
-
-  filename = quicksave_get_filename(settings_current.od_quicksave_slot);
-
-  /*
-   * Dirty hack for savesstates.
-   * autoload is set to 9 for load from loadstates and avoid changing last
-   * loaded filename and controlmapping files
-   */
-  int error = utils_open_file( filename, 9, NULL );
-  if (error)
-    ui_error( UI_ERROR_ERROR, "Error loading state from slot %s", slot );
-  else
-    ui_widget_show_msg_update_info( "Loaded slot %s (%s)", slot, get_savestate_last_change(settings_current.od_quicksave_slot) );
-
   libspectrum_free( slot );
-  libspectrum_free( filename );
 
-  return error;
+  return savestate_read_internal( settings_current.od_quicksave_slot );
 }
 
 int
 savestate_write( const char *savestate )
 {
   char* slot;
-  char* filename;
 
   slot = utils_last_filename( savestate, 1 );
   if ( !slot ) return 1;
 
   settings_current.od_quicksave_slot = atoi( slot );
 
-  if (quicksave_create_dir()) {
-    libspectrum_free( slot );
-    return 1;
-  }
+  libspectrum_free(slot);
 
-  filename = quicksave_get_filename(settings_current.od_quicksave_slot);
-
-  int error = snapshot_write( filename );
-  if (error)
-    ui_error( UI_ERROR_ERROR, "Error saving state to slot %s", slot );
-  else
-    ui_widget_show_msg_update_info( "Saved to slot %s (%s)", slot, get_savestate_last_change(atoi(slot)) );
-
-  libspectrum_free( slot );
-  libspectrum_free( filename );
-
-  return error;
+  return savestate_write_internal( settings_current.od_quicksave_slot );
 }
 #endif /* #ifdef GCWZERO */
