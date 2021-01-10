@@ -22,8 +22,10 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "settings.h"
 #include "fuse.h"
 #include "ui/ui.h"
+#include "ui/uidisplay.h"
 #include "utils.h"
 #include "widget_internals.h"
 
@@ -38,7 +40,7 @@
 typedef struct widget_stateent {
   char *name;
   char *info;
-  int size;
+  int slot;
 } widget_stateent;
 
 static struct widget_stateent **widget_savestates; /* Savestates in the current slot */
@@ -58,6 +60,20 @@ static int exit_all_widgets;
    which it will be on after this keypress */
 static size_t top_savestate, current_savestate, new_current_savestate;
 
+typedef struct saved_position {
+  int saved_position;
+  size_t top_savestate, current_savestate;
+} saved_position_t;
+static saved_position_t saved_positions[2];
+
+static int showing_screenshot = 0;
+
+static char* last_program = NULL;
+static char* last_format = NULL;
+libspectrum_machine last_machine = LIBSPECTRUM_MACHINE_UNKNOWN;
+
+static void widget_savestate_init( void );
+static void savestate_print_screenshot_back( struct widget_stateent *savestate );
 static char *widget_get_savestate( const char *title, int saving );
 static int widget_print_all_savestates( struct widget_stateent **savestates, int numsavestates,
 				       int top, int current );
@@ -70,6 +86,17 @@ static int widget_search_savestates( struct widget_stateent ***namelist );
 static int widget_add_savestate( int *allocated, int index, int slot,
                                       struct widget_stateent ***namelist,
                                       const char *name );
+
+static void
+savestate_print_screenshot_back( struct widget_stateent *savestate )
+{
+  utils_file screen;
+  savestate_get_screen_for_slot( savestate->slot, &screen );
+
+  uidisplay_spectrum_screen( screen.buffer, 0 );
+  uidisplay_frame_end();
+}
+
 
 static char *
 widget_get_savestate( const char *title, int saving )
@@ -144,6 +171,7 @@ widget_add_savestate( int *allocated, int index, int slot,
     return -1;
   }
 
+  (*namelist)[index]->slot = slot;
   char* final_name = utils_last_filename( name, 0 );
   length = strlen( final_name ) + 1;
   if( length < 16 ) length = 16;
@@ -247,6 +275,55 @@ widget_scan_savestates( void )
 	 (int(*)(const void*,const void*))widget_scan_compare );
 }
 
+static void
+widget_savestate_init( void )
+{
+  char* program;
+  
+  int reset_positions = 0;
+
+  if ( last_machine != machine_current->machine ) {
+    last_machine = machine_current->machine;
+    reset_positions = 1;
+  }
+
+  if ( !last_format || strcmp( last_format, settings_current.od_quicksave_format ) ) {
+    if ( last_format ) libspectrum_free( last_format );
+    last_format = utils_safe_strdup( settings_current.od_quicksave_format );
+    reset_positions = 1;
+  }
+
+  program = quicksave_get_current_program();
+  if ( !last_program || strcmp( program, last_program ) ) {
+    if ( last_program ) libspectrum_free( last_program );
+    last_program = utils_safe_strdup( program );
+	reset_positions = 1;
+  }
+  libspectrum_free( program );
+  
+  if ( reset_positions ) {
+    saved_positions[0].saved_position = 0;
+    saved_positions[0].top_savestate = 0;
+    saved_positions[0].current_savestate = 0;
+
+    saved_positions[1] = saved_positions[0];
+  }
+
+  /* Restore position and savestate selected for save */
+  if ( saved_positions[is_saving].saved_position ) {
+    saved_positions[is_saving].saved_position = 0;
+    top_savestate = saved_positions[is_saving].top_savestate;
+    new_current_savestate = current_savestate = saved_positions[is_saving].current_savestate;
+  } else {
+    if ( is_saving ) {
+      top_savestate = new_current_savestate = current_savestate = settings_current.od_quicksave_slot;
+    } else {
+      top_savestate = new_current_savestate = current_savestate = 0;
+    }
+  }
+}
+
+
 /* Savestate selection widget */
 
 static int
@@ -258,13 +335,9 @@ widget_savestate_selector_draw( void *data )
   exit_all_widgets = filesel_data->exit_all_widgets;
   title = filesel_data->title;
 
-  /* Restore position and savestate selected for save */
-  if ( is_saving )
-    top_savestate = new_current_savestate = current_savestate = settings_current.od_quicksave_slot;
-  else
-    top_savestate = new_current_savestate = current_savestate = 0;
-
   widget_scan_savestates();
+
+  widget_savestate_init();
 
   /* Create the dialog box */
   error = widget_dialog_with_border( DIALOG_X_POSITION, DIALOG_Y_POSITION, DIALOG_WIDTH, DIALOG_HEIGHT );
@@ -286,6 +359,9 @@ widget_print_all_savestates( struct widget_stateent **savestates, int numsavesta
   int i;
   int error;
 
+  if ( settings_current.od_quicksave_show_back_preview )
+    savestate_print_screenshot_back( widget_savestates[ current ] );
+
   /* Give us a clean box to start with */
   error = widget_dialog_with_border( DIALOG_X_POSITION, DIALOG_Y_POSITION, DIALOG_WIDTH, DIALOG_HEIGHT );
   if( error ) return error;
@@ -304,8 +380,19 @@ widget_print_all_savestates( struct widget_stateent **savestates, int numsavesta
     }
   }
 
+  #ifdef MIYOO
+  widget_printstring( DIALOG_X_POSITION * 8 + 4, (DIALOG_Y_POSITION + ENTRIES_PER_SCREEN + 3) * 8, WIDGET_COLOUR_FOREGROUND,
+				     "\012B\001 = select" );
+
+  widget_printstring( ( DIALOG_X_POSITION + 13 ) * 8 + 2, (DIALOG_Y_POSITION + ENTRIES_PER_SCREEN + 3) * 8, WIDGET_COLOUR_FOREGROUND,
+				        "\012Y\001 = show screen" );
+  #else
   widget_printstring( DIALOG_X_POSITION * 8 + 4, (DIALOG_Y_POSITION + ENTRIES_PER_SCREEN + 3) * 8, WIDGET_COLOUR_FOREGROUND,
 				     "\012A\001 = select" );
+
+  widget_printstring( ( DIALOG_X_POSITION + 13 ) * 8 + 2, (DIALOG_Y_POSITION + ENTRIES_PER_SCREEN + 3) * 8, WIDGET_COLOUR_FOREGROUND,
+				        "\012X\001 = show screen" );
+  #endif
 
   if( i < numsavestates )
     widget_down_arrow( DIALOG_X_POSITION, DIALOG_Y_POSITION + ENTRIES_PER_SCREEN + 1, WIDGET_COLOUR_FOREGROUND );
@@ -316,9 +403,9 @@ widget_print_all_savestates( struct widget_stateent **savestates, int numsavesta
   return 0;
 }
 
-/* Print a filename onto the dialog box */
+/* Print a savestate onto the dialog box */
 static int
-widget_print_savestate( struct widget_stateent *filename, int position,
+widget_print_savestate( struct widget_stateent *savestate, int position,
 				        int inverted )
 {
   char name[4], info[26];
@@ -333,12 +420,12 @@ widget_print_savestate( struct widget_stateent *filename, int position,
 
   widget_rectangle( x, y, 168, 8, background );
 
-  snprintf( name, 4, "\012%s\001", filename->name );
+  snprintf( name, 4, "\012%s\001", savestate->name );
   name[3] = '\0';
 
   widget_printstring( x + 1, y, foreground, name );
 
-  snprintf( info, 26, "%s", filename->info );
+  snprintf( info, 26, "%s", savestate->info );
   info[25] = '\0';
 
   widget_printstring( x + 24, y, foreground, info );
@@ -354,6 +441,10 @@ widget_savestate_selector_finish( widget_finish_state finished )
     if( widget_savestate_name ) free( widget_savestate_name );
     widget_savestate_name = NULL;
   }
+  
+  saved_positions[is_saving].saved_position = 1;
+  saved_positions[is_saving].top_savestate = top_savestate;
+  saved_positions[is_saving].current_savestate = current_savestate;
 
   return 0;
 }
@@ -380,6 +471,9 @@ widget_savestate_selector_keyhandler( input_key key )
     return;
   }
 
+  if ( showing_screenshot && !settings_current.od_quicksave_show_back_preview )
+    uidisplay_frame_restore();
+
   new_current_savestate = current_savestate;
 
   switch(key) {
@@ -390,7 +484,13 @@ widget_savestate_selector_keyhandler( input_key key )
 
   case INPUT_KEY_Alt_L: /* B */
   case INPUT_JOYSTICK_FIRE_2:
-    widget_end_widget( WIDGET_FINISHED_CANCEL );
+    if ( showing_screenshot ) {
+      showing_screenshot = 0;
+      widget_print_all_savestates( widget_savestates, widget_numsavestates,
+				  top_savestate, current_savestate );
+    } else {
+      widget_end_widget( WIDGET_FINISHED_CANCEL );
+    }
     break;
 
   case INPUT_KEY_Down: /* Down */
@@ -440,6 +540,27 @@ widget_savestate_selector_keyhandler( input_key key )
 	  widget_end_widget( WIDGET_FINISHED_OK );
     }
     break;
+  
+  case INPUT_KEY_Left: /* Left */
+  case INPUT_JOYSTICK_LEFT:
+    if ( showing_screenshot ) {
+      showing_screenshot = 0;
+      widget_print_all_savestates( widget_savestates, widget_numsavestates,
+				  top_savestate, current_savestate );
+    }
+    break;
+
+  case INPUT_KEY_space: /* X */
+  case INPUT_KEY_Right: /* Right */
+  case INPUT_JOYSTICK_RIGHT:
+    /* widget show screenshot */
+    if ( !settings_current.od_quicksave_show_back_preview )
+      uidisplay_frame_save();
+    showing_screenshot = 1;
+    savestate_print_screenshot_back( widget_savestates[ current_savestate ] );
+    widget_print_savestate( widget_savestates[ current_savestate ], (ENTRIES_PER_SCREEN + 2), 0 );
+    widget_display_lines( (ENTRIES_PER_SCREEN + 2), 1 );
+    break;
 
   default:	/* Keep gcc happy */
     break;
@@ -469,15 +590,22 @@ widget_savestate_selector_keyhandler( input_key key )
 
       /* Otherwise, print the current file uninverted and the
 	 new current file inverted */
+     showing_screenshot = 1;
 
-      widget_print_savestate( widget_savestates[ current_savestate ],
-			     current_savestate - top_savestate, 0 );
+      if ( showing_screenshot ) {
+        showing_screenshot = 0;
+        widget_print_all_savestates( widget_savestates, widget_numsavestates,
+				    top_savestate, new_current_savestate );
+      } else {
+        widget_print_savestate( widget_savestates[ new_current_savestate ],
+			       new_current_savestate - top_savestate, 0 );
 
-      widget_print_savestate( widget_savestates[ new_current_savestate ],
+      	widget_print_savestate( widget_savestates[ new_current_savestate ],
 			     new_current_savestate - top_savestate, 1 );
 
-      widget_display_lines( DIALOG_Y_POSITION, DIALOG_HEIGHT - 1 );
-    }
+      	widget_display_lines( DIALOG_Y_POSITION, DIALOG_HEIGHT );    
+      }
+	}
 
     /* Reset the current file marker */
     current_savestate = new_current_savestate;

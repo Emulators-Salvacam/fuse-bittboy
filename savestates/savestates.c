@@ -32,6 +32,7 @@
 #include "utils.h"
 #include "settings.h"
 #include "ui/ui.h"
+#include "screenshot.h"
 #include "savestates/savestates.h"
 
 #ifdef GCWZERO
@@ -106,7 +107,6 @@ savestate_read_internal( int slot )
   if (error)
     ui_error( UI_ERROR_ERROR, "Error loading state from slot %02d", slot );
   else
-
     #ifdef MIYOO    
     ui_widget_show_msg_update_info( "Loaded slot %02d", slot );
     #else
@@ -199,6 +199,84 @@ scan_directory_for_savestates( const char* dir, int (*check_fn)(const char*) )
     return 0;
 
   return exist;
+}
+
+static int
+savetate_read_snapshot( char* snapshot, libspectrum_snap *snap, utils_file* file )
+{
+  int error;
+
+  if ( !snapshot || !compat_file_exists( snapshot ))
+    return 1;
+
+  error = utils_read_file( snapshot, file );
+  if( error )
+    return error;
+
+  error = libspectrum_snap_read( snap, file->buffer, file->length,
+                         LIBSPECTRUM_ID_UNKNOWN, snapshot );
+  if( error ) {
+    utils_close_file( file );
+    return error;
+  }
+
+  utils_close_file( file );
+
+  return 0;
+}
+
+int
+savestate_get_screen_for_slot( int slot, utils_file* screen )
+{
+  utils_file file;
+  char* savestate;
+  int error;
+  libspectrum_snap *snap;
+  int page;
+
+  /* Initialize screenshot to black */
+  screen->length = 6912;
+  screen->buffer = libspectrum_new( unsigned char, screen->length );
+  memset( screen->buffer, 0, screen->length );
+
+  savestate = quicksave_get_filename( slot );
+
+  snap = libspectrum_snap_alloc();
+
+  error = savetate_read_snapshot( savestate, snap, &file );
+
+  libspectrum_free( savestate );
+
+  if( error ) {
+    libspectrum_snap_free( snap );
+    return error;
+  }
+
+  switch ( libspectrum_snap_machine( snap ) ) {
+  case LIBSPECTRUM_MACHINE_PENT:
+  case LIBSPECTRUM_MACHINE_PENT512:
+  case LIBSPECTRUM_MACHINE_PENT1024:
+  case LIBSPECTRUM_MACHINE_SCORP:
+  case LIBSPECTRUM_MACHINE_PLUS3E:
+  case LIBSPECTRUM_MACHINE_PLUS2A:
+  case LIBSPECTRUM_MACHINE_PLUS3:
+  case LIBSPECTRUM_MACHINE_PLUS2:
+  case LIBSPECTRUM_MACHINE_128:
+  case LIBSPECTRUM_MACHINE_128E:
+  case LIBSPECTRUM_MACHINE_SE:
+    page = libspectrum_snap_out_128_memoryport( snap ) & 0x08 ? 7 : 5;
+    break;
+  default:
+    page = 5;
+    break;
+  }
+  memcpy(screen->buffer, libspectrum_snap_pages( snap, page ), screen->length);
+
+  error = libspectrum_snap_free( snap );
+  if( error )
+    return error;
+
+  return 0;
 }
 
 char*

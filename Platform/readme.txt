@@ -52,7 +52,22 @@ then Fuse will create it at start.
 
     * See section 'Hotkey combinations' for info about key combinations to
       savestates.
-      
+
+  - Show savestate screen as back image in menu
+    -------------------------------------------
+    Default enabled.
+
+    In the menu for loading and saving states the screen for the savestate
+    selected is shown as back image.
+
+    It can be fully viewed using Right cursor or the 'X' Button.
+
+    In the screenshot full view:
+      - 'A' Button to load the state
+      - 'B' Button or Left cursor to return to the list of savestates
+      - Cursor Up and Down to return to the savestates list and select
+        previous or next savestate.
+
 ----------------------------------
 ### OpenDingux/RetroFW options ###
 ----------------------------------
@@ -62,38 +77,80 @@ For the OpenDingux/RetroFW port some additional options had been added.
 Savestate options
 -----------------
 
+The Savestates functionality is a layer for quickly saving and loading
+snapshots organized by machine models and program names.
+
+Internally it uses the main functionality of Fuse to read and write
+snapshots.
+
+Becouse the main objective is speed up the operation to read
+and write snapshots for the use with handelds the options for
+savestates has been put directly in the main menú and assigned to new
+kotkey combos.
+
+Hotkeys assigned for savestates:
+    · L1 + Cursor down    Quicksave state for current slot
+    · R1 + Cursor up      Quickload state for current slot
+    · R1 + Cursor right   Increase slot to use
+    · R1 + Cursor left    Decrease slot to use
+
   - Current slot
     ------------
     Default 0. Maximum 99.
 
-    Number of slot used for quick saves and load states.
+    Current number of slot used for quick saves and load.
+
+    The slot number for savestates is global. If you load another program
+    without exit the emulator, the slot in use for the savestates of the
+    newly loaded program is the one previously used.
+
+  - Show slot in status bar
+    -----------------------
+    Default enabled.
+
+    Show the current selected slot in status bar info.
 
   - Savestate format
     ----------------
-    SZX, Z80, SNA. Default SZX.
+    SZX, Z80. Default SZX.
 
     Format used for the savestates.
 
-    For Z80 or SNA formats a warning will be emmited.
+    The default SZX is the recommeneded format. For Z80 format a warning
+    about loss of information will be emmited.
+    
+    The Z80 format does not support all combinations for storing information
+    about the media and hardware used, this include same machine models.
+    Some examples:
+     · Pentagon 256 and 1024 are saved as Pentagon 128, so when you save
+       a savestate with this models the load change to Pentagon 128. If you
+       are using savestates per machine model then the path to access
+       savestates also change.
+     · If you are using interface 2 with cartridge this information is lost
+       when saved so the load of savestates will fail.
+    For a tipical media as tapes and disks with no extra hardware attached to
+    emulator you can go ahead with Z80 format, but for best cominations of
+    hardware and media it's best to stick with SZX format.
+
+    For Z80 format see https://worldofspectrum.org/faq/reference/z80format.htm
+    For SZF format see https://www.spectaculator.com/docs/zx-state/intro.shtml
 
   - Savestates per machine model
     ----------------------------
     Default enabled.
 
-    Some programs work for different models. By default the savestates use
-    different locations for every model.
+    By default the savestates use different locations for every model.
 
-    This behaviour can be changed disabling this option but this can bring
+    This behaviour can be changed disabling this option but that can lead
     to strange situations. For example:
         · load a program for a 48k model
         · Create a savestate
         · Change the model to +2A and load again the same program
-        · Load the savestate
-        The result is that the savestate load restore the 48k model in what
-        it was saved.
+        · Load the savestate and the machine model is restored to the 48k model
 
-    * Location for save states is:
+    * Savestates location is:
       $HOME/.fuse/savestates/<MODEL>/<PROGRAM NAME>
+      $HOME/.fuse/savestates/<PROGRAM NAME> if disabled per machine model
 
       · <MODEL> is the name for machine model as informed by libspectrum.
       · <PROGRAM NAME> is the name of the program with an attempt to remove
@@ -101,10 +158,15 @@ Savestate options
       · The name for the savestate will be the slot number with the extension
         for the format configurated.
 
-    * For programs with diferent tape or disk sides an attempt is made to
-      remove this info from the name so the save states will be the same.
-      In next sessions you can load directly the last used tape/side and load
-      your savestate.
+    * For mediums with various parts (disk and tape sides) the emulator tries
+      to determine a name for the saves removing this info, so the savestates
+      for different sides/disks belong to the same program.
+      An example of use is when you load a program and then save an state when
+      you are side2/disk2. Later, in another session, you can directly load
+      this state without load side1/tape1. Directly insert the medium for
+      side2/disk2 and load the savestate from menú options or hotkeys combos.
+      If necessary for tapes you can use the tape browser to position in the
+      right phase/position to load.
 
 Options - General GCW0
 ----------------------

@@ -343,12 +343,59 @@ if test -z "$UI"; then
   fi
 fi
 
+dnl Look for Miyoo (default=no)
+miyoo=no
+if test -z "$UI"; then
+  AC_MSG_CHECKING(whether Miyoo requested)
+  AC_ARG_WITH(miyoo,
+  [  --with-miyoo          Build for Miyoo (--with-sdl)],
+  if test "$withval" = no; then miyoo=no; else miyoo=yes; fi,
+  miyoo=no)
+  AC_MSG_RESULT($miyoo)
+  if test "$miyoo" = yes; then
+    if test "$sdl_available" = yes; then
+      AC_DEFINE([GCWZERO], 1, [Defined if GCW ZERO is in use])
+      AC_DEFINE([RETROFW], 1, [Defined if RetroFW is in use])
+      AC_DEFINE([MIYOO], 1, [Defined if Miyoo is in use])
+      UI=sdl
+      WIDGET=widget
+      use_sdl=yes
+    else
+      AC_MSG_ERROR([SDL version $SDL_VERSION not found])
+    fi
+  fi
+fi
+
+dnl Look for Miyoo BOB (default=no)
+bob=no
+if test -z "$UI"; then
+  AC_MSG_CHECKING(whether Miyoo requested)
+  AC_ARG_WITH(bob,
+  [  --with-bob          Build for Miyoo BOB (--with-sdl)],
+  if test "$withval" = no; then bob=no; else bob=yes; fi,
+  bob=no)
+  AC_MSG_RESULT($miyoo)
+  if test "$bob" = yes; then
+    if test "$sdl_available" = yes; then
+      AC_DEFINE([GCWZERO], 1, [Defined if GCW ZERO is in use])
+      AC_DEFINE([RETROFW], 1, [Defined if RetroFW is in use])
+      AC_DEFINE([MIYOO], 1, [Defined if Miyoo is in use])
+      AC_DEFINE([BOB], 1, [Defined if BOB is in use])
+      UI=sdl
+      WIDGET=widget
+      use_sdl=yes
+    else
+      AC_MSG_ERROR([SDL version $SDL_VERSION not found])
+    fi
+  fi
+fi
+
 dnl Common DEFINES for OpenDingux/RetroFW
-if test "$gcw0" = "yes" -o "$retrofw" = "yes"; then
+if test "$gcw0" = "yes" -o "$retrofw" = "yes" -o "$miyoo" = "yes" -o "$bob" = "yes"; then
   AC_DEFINE([VKEYBOARD], 1, [Virtual Keyboard defined for OpenDingux/RetroFW])
   AC_DEFINE([UI_SDL], 1, [Defined if the SDL UI in use])
   AC_DEFINE([USE_WIDGET], 1, [Defined if we're using a widget-based UI])
-  AC_DEFINE([GCW0_VERSION], "m4_normalize(m4_include(Platform/VERSION)) for OpenDingux/RetroFW", [OpenDingux/RetroFW Version])
+  AC_DEFINE([GCW0_VERSION], "m4_normalize(m4_include(Platform/VERSION)) for Miyoo", [Miyoo Version])
 fi
 
 dnl Look for null UI (default=no)
@@ -999,7 +1046,7 @@ dnl This tells the Makefile to use SDL_CFLAGS and SDL_LIBS during the build
 AM_CONDITIONAL(USE_SDL, test "$use_sdl" = "yes")
 
 dnl This tells the Makefile to build some parts for OpenDingux/RetroFW
-AM_CONDITIONAL(BUILD_GCWZERO, test [ "$gcw0" = "yes" -o "$retrofw" = "yes" ])
+AM_CONDITIONAL(BUILD_GCWZERO, test [ "$gcw0" = "yes" -o "$retrofw" = "yes" -o "$miyoo" = "yes" -o "$bob" = "yes" ])
 
 dnl Decide whether to install desktop and mime files
 AC_ARG_ENABLE(desktop-integration,
@@ -1124,6 +1171,8 @@ echo "TTX2000 S support: ${build_ttx2000s}"
 echo "Desktop integration: ${desktopintegration}"
 echo "GCW ZERO: ${gcw0}"
 echo "RetroFW 2: ${retrofw}"
+echo "Miyoo: ${miyoo}"
+echo "BOB: ${bob}"
 echo ""
 echo "Type 'make' to compile Fuse"
 echo ""

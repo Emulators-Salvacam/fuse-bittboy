@@ -406,7 +406,7 @@ push_combo_event( Uint16* flags )
     ui_widget_show_msg_update_info( "Slot set to %02d %s",
                              settings_current.od_quicksave_slot,
                              check_current_savestate_exist(settings_current.od_quicksave_slot) 
-                             ? "" : "(Empty)" );
+                             ? "" : "(Empty) " );
     #else
     ui_widget_show_msg_update_info( "Slot set to %02d (%s)",
                              settings_current.od_quicksave_slot,

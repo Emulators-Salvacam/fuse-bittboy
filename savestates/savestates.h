@@ -21,6 +21,7 @@
 
 #include <libspectrum.h>
 #include "settings.h"
+#include "utils.h"
 
 #define MAX_SAVESTATES 100
 
@@ -38,5 +39,6 @@ int quicksave_save(void);
 char* get_savestate_last_change(int slot);
 int savestate_write( const char *savestate );
 int savestate_read( const char *savestate );
+int savestate_get_screen_for_slot( int slot, utils_file* screen );
 
 #endif /* FUSE_SAVESTATES_H */
