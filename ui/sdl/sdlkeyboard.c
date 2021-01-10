@@ -29,6 +29,7 @@
 
 #include "display.h"
 #include "fuse.h"
+#include "input.h"
 #include "keyboard.h"
 #include "machine.h"
 #include "settings.h"
@@ -75,13 +76,26 @@ sdlkeyboard_end(void)
   g_hash_table_destroy( unicode_keysyms_hash );
 }
 
+#ifdef MIYOO
+static input_key
+mapping_Miyoo( input_key fuse_keysym )
+{
+  if ( fuse_keysym == INPUT_KEY_Control_R) return INPUT_KEY_Home;
+  return fuse_keysym;
+}
+#endif
+
 void
 sdlkeyboard_keypress( SDL_KeyboardEvent *keyevent )
 {
   input_key fuse_keysym, unicode_keysym;
   input_event_t fuse_event;
-
+  
   fuse_keysym = keysyms_remap( keyevent->keysym.sym );
+
+  #ifdef MIYOO
+  fuse_keysym = mapping_Miyoo(fuse_keysym);
+  #endif
 
   /* Currently unicode_keysyms_map contains ASCII character keys */
   if( ( keyevent->keysym.unicode & 0xFF80 ) == 0 ) 
@@ -107,8 +121,12 @@ sdlkeyboard_keyrelease( SDL_KeyboardEvent *keyevent )
 {
   input_key fuse_keysym;
   input_event_t fuse_event;
-
+  
   fuse_keysym = keysyms_remap( keyevent->keysym.sym );
+
+  #ifdef MIYOO
+  fuse_keysym = mapping_Miyoo(fuse_keysym);
+  #endif
 
   if( fuse_keysym == INPUT_KEY_NONE ) return;
 

@@ -355,7 +355,6 @@ if test -z "$UI"; then
   if test "$miyoo" = yes; then
     if test "$sdl_available" = yes; then
       AC_DEFINE([GCWZERO], 1, [Defined if GCW ZERO is in use])
-      AC_DEFINE([RETROFW], 1, [Defined if RetroFW is in use])
       AC_DEFINE([MIYOO], 1, [Defined if Miyoo is in use])
       UI=sdl
       WIDGET=widget
@@ -378,7 +377,6 @@ if test -z "$UI"; then
   if test "$bob" = yes; then
     if test "$sdl_available" = yes; then
       AC_DEFINE([GCWZERO], 1, [Defined if GCW ZERO is in use])
-      AC_DEFINE([RETROFW], 1, [Defined if RetroFW is in use])
       AC_DEFINE([MIYOO], 1, [Defined if Miyoo is in use])
       AC_DEFINE([BOB], 1, [Defined if BOB is in use])
       UI=sdl
