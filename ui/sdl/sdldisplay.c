@@ -283,6 +283,7 @@ RETROFW_2;
 #else
 OPENDINGUX_2014;
 #endif
+#ifndef MIYOO
 #ifndef RETROFW
 typedef enum sdldisplay_od_panel_types {
       P320240,
@@ -290,6 +291,7 @@ typedef enum sdldisplay_od_panel_types {
       P480320
 } sdldisplay_t_od_panel_type;
 static sdldisplay_t_od_panel_type sdl_od_panel_type = P320240;
+#endif
 #endif
 
 typedef struct od_s_icon_positions {
@@ -942,8 +944,10 @@ sdldisplay_load_gfx_mode( void )
   }
 
   int display_width, display_height;
+#ifndef MIYOO
 #ifndef RETROFW
   sdl_od_panel_type = option_enumerate_general_gcw0_od_panel_type();
+#endif
 #endif
 #ifndef MIYOO
   sdldisplay_current_od_border = option_enumerate_general_gcw0_od_border();
@@ -964,6 +968,7 @@ sdldisplay_load_gfx_mode( void )
     int scale = ( libspectrum_machine_capabilities( machine_current->machine ) & LIBSPECTRUM_MACHINE_CAPABILITY_TIMEX_VIDEO ) ? 2 : 1;
     od_t_screen_scaling *ssc = &od_screen_scalings_2x[0];
 
+#ifndef MIYOO
 #ifndef RETROFW
     if ( sdldisplay_current_size <= 1 )
       switch (sdl_od_panel_type) {
@@ -987,6 +992,7 @@ sdldisplay_load_gfx_mode( void )
         break;
       }
 #endif /* ifndef RETROFW */
+#endif /* ifndef MIYOO */
 
     clip_area.x = ( DISPLAY_ASPECT_WIDTH - ssc[sdldisplay_current_od_border].w ) * scale / 2;
     clip_area.y = ( DISPLAY_SCREEN_HEIGHT - ssc[sdldisplay_current_od_border].h ) * scale / 2;
@@ -1631,6 +1637,7 @@ uidisplay_vkeyboard( void (*print_fn)(void), int position ) {
 
 #ifdef GCWZERO
   od_t_screen_scaling* ssc = &od_screen_scalings_2x[0];
+#ifndef MIYOO
 #ifndef RETROFW
   if ( sdldisplay_current_size <= 1 )
     switch (sdl_od_panel_type) {
@@ -1646,6 +1653,7 @@ uidisplay_vkeyboard( void (*print_fn)(void), int position ) {
     default:
       break;
     }
+#endif
 #endif
   if ( ui_widget_level == -1 )
     current_positions = ssc[sdldisplay_current_od_border].vkeyboard;

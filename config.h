@@ -7,6 +7,9 @@
 /* Defined if we can increase Blip Buffer accuracy */
 /* #undef BLIP_BUFFER_ACCURACY */
 
+/* Defined if BOB is in use */
+#define BOB 1
+
 /* Define to 1 if SpeccyBoot is supported. */
 #define BUILD_SPECCYBOOT 1
 
@@ -28,15 +31,12 @@
 /* Define version information for win32 executables */
 #define FUSE_RC_VERSION 1,5,7,0
 
-/* OpenDingux/RetroFW Version */
+/* Miyoo Version */
 #define GCW0_VERSION "0.0.3 for Miyoo"
 
 /* Defined if GCW ZERO is in use */
 #define GCWZERO 1
-#define MIYOO 1
-/*
-#define BOB 1
-*/
+
 /* Define to 1 if you have the `dirname' function. */
 #define HAVE_DIRNAME 1
 
@@ -131,6 +131,9 @@
    */
 #define LT_OBJDIR ".libs/"
 
+/* Defined if Miyoo is in use */
+#define MIYOO 1
+
 /* Defined if no sound code is present */
 /* #undef NO_SOUND */
 
@@ -160,7 +163,7 @@
 /* #undef PTHREAD_CREATE_JOINABLE */
 
 /* Defined if RetroFW is in use */
-#define RETROFW 1
+/* #undef RETROFW */
 
 /* Location of the ROM images */
 /* #undef ROMSDIR */

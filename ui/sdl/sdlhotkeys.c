@@ -104,6 +104,8 @@ static const char * const od_border[] = {
     L1 + R1          Exit fuse
     R + A            Load state - Open file (F3)
     R + B            Save state - Save file (F2)
+    R + Right        Increase Slot
+    R + Left         Decrease Slot
 
     L + A            Fullscreen
     L + B            Status bar

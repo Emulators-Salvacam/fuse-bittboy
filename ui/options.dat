@@ -33,8 +33,10 @@ Combo, B(o)rder, od_border, INPUT_KEY_o, *Full|Medium|Small|Minium
 Checkbox, Triple Bu(f)fer, od_triple_buffer, INPUT_KEY_f
 Combo, B(o)rder, od_border, INPUT_KEY_o, *Full|Large|Medium|Small|None
 #endif
-#ifndef RETROFW
+#ifndef MIYOO
+#ifndef RETROFW 
 Combo, P(a)nel type, od_panel_type, INPUT_KEY_a, *320x240|640x480|480x320
+#endif
 #endif
 Checkbox, Fu(l)lscreen, od_fullscreen, INPUT_KEY_h
 #ifndef MIYOO
