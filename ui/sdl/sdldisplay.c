@@ -1129,7 +1129,7 @@ void uidisplay_fullscreen (void)
   {
     if (settings_current.od_fullscreen)
     {
-      position_border_width = 32;
+      position_border_width = 33;
       position_border_height = 25;      
       border_width = 32;
       border_height = 24;
@@ -1139,22 +1139,22 @@ void uidisplay_fullscreen (void)
       //fprintf( stderr, "%s: Option border\n", settings_current.od_border );
       //Full|Medium|Small|Minium
       //Medium
-      position_border_width = 16;
+      position_border_width = 17;
       position_border_height = 13;
       border_width = 16;
       border_height = 12;
 
       if (strncmp(settings_current.od_border,"Small", 4 ) == 0)
       {
-        position_border_width = 24;
-        position_border_height = 19;
+        position_border_width = 25;
+        position_border_height = 18;
         border_width = 24;
         border_height = 18;
       }
       else if (strncmp(settings_current.od_border,"Minium", 4 ) == 0)
       {      
-        position_border_width = 28;
-        position_border_height = 22;
+        position_border_width = 29; //28
+        position_border_height = 23; //21
         border_width = 28;
         border_height = 21;
       }
