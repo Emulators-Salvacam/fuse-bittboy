@@ -2016,7 +2016,9 @@ uidisplay_frame_end( void )
   SDL_UpdateRects( sdldisplay_gc, num_rects, updated_rects );
 
   num_rects = 0;
+  #ifndef MIYOO
   sdldisplay_force_full_refresh = 0;
+  #endif
 }
 
 void
