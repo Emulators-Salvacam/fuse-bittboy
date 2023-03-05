@@ -5,15 +5,10 @@
 .vscode
 /aclocal.m4
 /autom4te.cache
-/compile
 /config.cache
-/config.guess
 /config.h
-/config.h.in
 /config.log
 /config.status
-/config.sub
-/configure
 /cscope.out
 /data/fuse.desktop
 /data/fuse.xml
@@ -25,14 +20,12 @@
 /debugger/commandl.c
 /debugger/commandy.c
 /debugger/commandy.h
-/depcomp
 .deps
 .dirstamp
 /fuse
 /fuse.dSYM
 /fuse.exe
 /.gdb_history
-/install-sh
 .libs
 /lib/*.szx
 /lib/tests/fatware-success.hdf
@@ -47,8 +40,6 @@
 /m4/ltsugar.m4
 /m4/ltversion.m4
 /Makefile
-/Makefile.in
-/missing
 /mkinstalldirs
 *.o
 /options.h
@@ -95,7 +86,6 @@ tags
 /ui/win32/options.rc
 /ui/xlib/keysyms.c
 /ui/xlib/xpixmaps.c
-/ylwrap
 /z80/coretest
 /z80/coretest.exe
 /z80/coretest.out

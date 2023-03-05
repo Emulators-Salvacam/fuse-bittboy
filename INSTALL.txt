@@ -1,0 +1,170 @@
+Build Fuse and libspectrum for OpenDingux, RetroFW and Miyoo
+===============================================================
+
+The steps provided here has been tested on a bash terminal session on an Ubuntu
+18.04.04 LTS with default GCC toolchain and development tools (automake,
+autoconf, make, git, squashfs-tools, flex, bison, perl, libtool, etc...).
+
+squashfs-tools package is needed for creating opk files.
+
+Toolchains tested:
+- For OpenDingux the GCW0, RG350 and latest beta OpenDingux toolchains
+- For RetroFW this was tested with RetroFW 2.
+- For Miyoo this was tested with https://github.com/steward-fu/miyoo/releases/download/v1.0/toolchain.7z.
+
+In the steps source code for Fuse and libspectrum was extracted in:
+  - $HOME/src/libspectrum-1.4.4
+  - $HOME/src/fuse-1.5.7
+
+In the steps the toolchain is installed in:
+  - /opt/toolchain
+  - /opt/miyoo (for Miyoo)
+
+To build Fuse we need first build and install libspectrum:
+  - In the steps is used $HOME/src/libspectrum-install
+  - libspectrum will be builded without libaudio and libgcrypt,
+  - For RetroFW is configured to use internal replacement for GLib.
+
+You must adapt this for your OS, toolchains and paths.
+
+Steps:
+======
+1.- Put your OpenDingux/RetroFW toolchain in PATH. For example:
+
+$ export PATH=/opt/toolchain/usr/bin:$PATH
+
+$ export PATH=/opt/miyoo/usr/bin/:$PATH 	(for Miyoo)
+	
+2.- Configure, build and install libspectrum:
+
+$ cd $HOME/src/libspectrum-1.4.4
+
+Configure for 2014 OpenDingux and latest beta:
+
+$ ./configure CC=mipsel-gcw0-linux-uclibc-gcc \
+CXX=mipsel-gcw0-linux-uclibc-g++ --host=mipsel-gcw0-linux-uclibc \
+--without-libaudiofile --without-libgcrypt \
+--prefix="$HOME/src/libspectrum-install" CFLAGS='-mips32r2 -O3'
+
+Configure for RetroFW:
+
+$ ./configure CC=mipsel-RetroFW-linux-uclibc-gcc \
+CXX=mipsel-RetroFW-linux-uclibc-g++ --host=mipsel-RetroFW-linux-uclibc \
+--without-libaudiofile --without-libgcrypt --with-fake-glib \
+--prefix="$HOME/src/libspectrum-install" CFLAGS='-mips32 -O3'
+
+Configure for Bittboy:
+
+$ ./configure CC=arm-linux-gcc CXX=arm-linux-g++ --host=arm-linux --without-libaudiofile --without-libgcrypt --with-fake-glib --prefix="$HOME/src/libspectrum-install"
+
+$ make && make install
+
+In $HOME/src/libspectrum-install must be installed libspectrum
+
+3.- Configure Fuse:
+
+$ cd $HOME/src/fuse-1.5.7
+
+Configure for 2014 OpenDingux:
+
+$ ./configure PKG_CONFIG_PATH="$HOME/src/libspectrum-install/lib/pkgconfig" \
+LIBSPECTRUM_CFLAGS="-I$HOME/src/libspectrum-install/include" \
+LIBSPECTRUM_LIBS="-L$HOME/src/libspectrum-install/lib -l:libspectrum.a -lbz2" \
+CC=mipsel-gcw0-linux-uclibc-gcc CXX=mipsel-gcw0-linux-uclibc-g++ \
+--host=mipsel-gcw0-linux-uclibc --with-gcw0 \
+--with-sdl-prefix=/opt/toolchain/usr/mipsel-gcw0-linux-uclibc/sysroot/usr \
+CFLAGS='-mips32r2 -O3'
+
+Configure for latest beta OpenDingux:
+
+$ ./configure PKG_CONFIG_PATH="$HOME/src/libspectrum-install/lib/pkgconfig" \
+LIBSPECTRUM_CFLAGS="-I$HOME/src/libspectrum-install/include" \
+LIBSPECTRUM_LIBS="-L$HOME/src/libspectrum-install/lib -l:libspectrum.a" \
+CC=mipsel-gcw0-linux-uclibc-gcc CXX=mipsel-gcw0-linux-uclibc-g++ \
+--host=mipsel-gcw0-linux-uclibc --with-gcw0 \
+--with-sdl-prefix=/opt/toolchain/usr/mipsel-gcw0-linux-uclibc/sysroot/usr \
+CFLAGS='-mips32r2 -O3'
+
+Configure for RetroFW:
+
+$ ./configure PKG_CONFIG_PATH="$HOME/src/libspectrum-install/lib/pkgconfig" \
+LIBSPECTRUM_CFLAGS="-I$HOME/src/libspectrum-install/include" \
+LIBSPECTRUM_LIBS="-L$HOME/src/libspectrum-install/lib -l:libspectrum.a -lbz2" \
+CC=mipsel-RetroFW-linux-uclibc-gcc CXX=mipsel-RetroFW-linux-uclibc-g++ \
+--host=mipsel-RetroFW-linux-uclibc --with-retrofw \
+--with-sdl-prefix=/opt/toolchain/mipsel-RetroFW-linux-uclibc/sysroot/usr \
+CFLAGS='-mips32 -O3'
+
+Configure for Bittboy:
+
+Hay que modificar el archivo fuse $HOME/src/fuse-1.5.7/configure, para cambiar el
+nombre de la version y añadir la variable de compilación Miyoo
+	
+
+	$as_echo "#define RETROFW 1" >>confdefs.h
+	+ $as_echo "#define MIYOO 1" >>confdefs.h
+
+	- $as_echo "#define GCW0_VERSION \"0.0.4 for OpenDingux/RetroFW\"" >>confdefs.h
+	+ $as_echo "#define GCW0_VERSION \"0.0.1 for Miyoo\"" >>confdefs.h
+
+	348
+  + AC_DEFINE([MIYOO], 1, [Defined if MIYOO is in use])
+
+$ ./configure PKG_CONFIG_PATH="$HOME/src/libspectrum-install/lib/pkgconfig" \
+LIBSPECTRUM_CFLAGS="-I$HOME/src/libspectrum-install/include" \
+LIBSPECTRUM_LIBS="-L$HOME/src/libspectrum-install/lib -l:libspectrum.a -lbz2" \
+CC=arm-linux-gcc CXX=arm-linux-g++ \
+--host=arm-linux --with-miyoo --with-bob \
+--with-sdl-prefix=/opt/miyoo/arm-miyoo-linux-uclibcgnueabi/sysroot/usr
+
+or 
+
+$ ./configure PKG_CONFIG_PATH="$HOME/src/libspectrum-install/lib/pkgconfig" \
+LIBSPECTRUM_CFLAGS="-I$HOME/src/libspectrum-install/include" \
+LIBSPECTRUM_LIBS="-L$HOME/src/libspectrum-install/lib -l:libspectrum.a -lbz2" \
+CC=arm-linux-gcc CXX=arm-linux-g++ \
+--host=arm-linux --with-miyoo \
+--with-sdl-prefix=/opt/miyoo/arm-miyoo-linux-uclibcgnueabi/sysroot/usr
+
+
+4.- Build Fuse
+
+For 2014 OpenDingux:
+
+$ cd $HOME/src/fuse-1.5.7/Platform/GCW0
+$ make
+
+fuse-1.5.7-od-v{version}.opk should be created in $HOME/src/fuse-1.5.7/Platform/GCW0/build
+
+For latest beta OpenDingux:
+
+$ cd $HOME/src/fuse-1.5.7/Platform/GCW0
+$ make
+
+fuse-1.5.7-latest_od-v{version}.opk should be created in $HOME/src/fuse-1.5.7/Platform/GCW0/build
+
+For RetroFW 2 and Miyoo:
+
+$ cd $HOME/src/fuse-1.5.7/Platform/RETROFW2.0
+$ make
+
+fuse-1.5.7-retrofw-v{version}.opk should be created in
+$HOME/src/fuse-1.5.7/Platform/RETROFW2.0/build
+
+For Miyoo files "system.retrofw.desktop", "default.retrofw.desktop" and "fuse-1.5.7-retrofw-v0.0.4.opk" are not necessary.
+
+For RetroFW 1:
+
+$ cd $HOME/src/fuse-1.5.7/Platform/RETROFW1.0
+$ make
+
+fuse-1.5.7-retrofw-v{version}.ipk $HOME/src/fuse-1.5.7/Platform/RETROFW1.0/build
+
+In all cases {version] is for OpenDingux/RetrFW version
+
+
+Error aclocal
+
+Install automake.
+sudo ln -s /usr/bin/aclocal /usr/bin/aclocal-1.14
+sudo ln -s /usr/bin/automake /usr/bin/automake-1.14
