@@ -110,6 +110,8 @@ nombre de la version y añadir la variable de compilación Miyoo
 	348
   + AC_DEFINE([MIYOO], 1, [Defined if MIYOO is in use])
 
+For for bob version (Open the keyboard with Select and the menu only with Reset)
+
 $ ./configure PKG_CONFIG_PATH="$HOME/src/libspectrum-install/lib/pkgconfig" \
 LIBSPECTRUM_CFLAGS="-I$HOME/src/libspectrum-install/include" \
 LIBSPECTRUM_LIBS="-L$HOME/src/libspectrum-install/lib -l:libspectrum.a -lbz2" \
@@ -117,7 +119,7 @@ CC=arm-linux-gcc CXX=arm-linux-g++ \
 --host=arm-linux --with-miyoo --with-bob \
 --with-sdl-prefix=/opt/miyoo/arm-miyoo-linux-uclibcgnueabi/sysroot/usr
 
-or 
+or  normal version (Open the keyboard with Start and the menu with Reset or Select)
 
 $ ./configure PKG_CONFIG_PATH="$HOME/src/libspectrum-install/lib/pkgconfig" \
 LIBSPECTRUM_CFLAGS="-I$HOME/src/libspectrum-install/include" \
