@@ -106,9 +106,11 @@ static const char * const od_border[] = {
     R + B            Save state - Save file (F2)
     R + Right        Increase Slot
     R + Left         Decrease Slot
+    R + Y           Machine select (F9)
 
     L + A            Fullscreen
     L + B            Status bar
+    L1 + Y           Media menu
 */
 
 #ifdef MIYOO
@@ -117,13 +119,14 @@ static const char * const od_border[] = {
 #define FULLSCREEN      (FLAG_L1|FLAG_A)
 #define CHANGE_BORDER   (FLAG_L1|FLAG_B)
 #define STATUS_BAR      (FLAG_L1|FLAG_X)
+#define OPEN_MEDIA      (FLAG_L1|FLAG_Y)
 
 #define QUICK_LOAD      (FLAG_R1|FLAG_A)
 #define QUICK_SAVE      (FLAG_R1|FLAG_B)
 
 #define INCREASE_SLOT   (FLAG_R1|FLAG_RIGHT)
 #define DECREASE_SLOT   (FLAG_R1|FLAG_LEFT)
-
+#define MACHINE_SELECT  (FLAG_R1|FLAG_Y)
 
 #else
 
@@ -243,6 +246,13 @@ push_combo_event( Uint16* flags )
 
   case QUICK_LOAD:
     quickload = 1; break;
+
+  case OPEN_MEDIA:
+    combo_key = SDLK_F11; break;
+    
+  case MACHINE_SELECT:
+    combo_key = SDLK_F9; break;
+
   default:
     break;
   }
